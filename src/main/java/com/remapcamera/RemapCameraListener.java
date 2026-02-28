@@ -16,8 +16,6 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	private int lastMouseX = -1;
 	private int lastMouseY = -1;
 
-	// Accumulated yaw/pitch delta (sensitivity pre-multiplied), drained on the client
-	// thread in RemapCameraPlugin#onClientTick to avoid mutating game state from the AWT thread.
 	final AtomicInteger pendingDx = new AtomicInteger();
 	final AtomicInteger pendingDy = new AtomicInteger();
 
@@ -93,8 +91,6 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	@Override
 	public MouseEvent mouseDragged(MouseEvent e)
 	{
-		// Only track position while a mouse button is held; do not accumulate camera delta
-		// here to avoid conflicting with the game's own right-click camera drag.
 		lastMouseX = e.getX();
 		lastMouseY = e.getY();
 		return e;
