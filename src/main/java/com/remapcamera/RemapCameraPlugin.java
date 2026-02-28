@@ -57,11 +57,10 @@ public class RemapCameraPlugin extends Plugin
 			return;
 		}
 
-		int newYaw = (client.getCameraYawTarget() + dx) & 2047;
-		int newPitch = Math.max(128, Math.min(383, client.getCameraPitchTarget() - dy));
-
-		client.setCameraYawTarget((client.getCameraYawTarget() - dx) & 2047);
-		client.setCameraPitchTarget(Math.max(128, Math.min(383, client.getCameraPitchTarget() + dy)));
+		client.setCameraYawTarget((client.getCameraYawTarget() + dx) & 2047);
+		
+		int currentPitch = client.getCameraPitchTarget();
+		client.setCameraPitchTarget(Math.max(128, Math.min(383, currentPitch - dy)));
 	}
 
 	@Provides
