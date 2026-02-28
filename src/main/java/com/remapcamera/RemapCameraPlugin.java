@@ -57,11 +57,9 @@ public class RemapCameraPlugin extends Plugin
 			return;
 		}
 
-		// Camera yaw wraps 0-2047; pitch is clamped 128-383 (standard OSRS limits)
 		int newYaw = (client.getCameraYawTarget() + dx) & 2047;
 		int newPitch = Math.max(128, Math.min(383, client.getCameraPitchTarget() - dy));
 
-		// Invert camera movement direction
 		client.setCameraYawTarget((client.getCameraYawTarget() - dx) & 2047);
 		client.setCameraPitchTarget(Math.max(128, Math.min(383, client.getCameraPitchTarget() + dy)));
 	}
