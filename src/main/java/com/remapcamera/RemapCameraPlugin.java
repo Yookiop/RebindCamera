@@ -12,9 +12,9 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
 @PluginDescriptor(
-	name = "Remap Camera Rotation",
-	description = "Rotate the camera by holding a configurable key and moving the mouse",
-	tags = {"camera", "rotate", "remap"}
+		name = "Remap Camera Rotation",
+		description = "Rotate the camera by holding a configurable key and moving the mouse",
+		tags = {"camera", "rotate", "remap"}
 )
 public class RemapCameraPlugin extends Plugin
 {
@@ -26,6 +26,9 @@ public class RemapCameraPlugin extends Plugin
 
 	@Inject
 	private MouseManager mouseManager;
+
+	@Inject
+	private RemapCameraConfig config;
 
 	@Inject
 	private RemapCameraListener inputListener;
@@ -57,8 +60,14 @@ public class RemapCameraPlugin extends Plugin
 			return;
 		}
 
+		if (config.invertCamera())
+		{
+			dx = -dx;
+			dy = -dy;
+		}
+
 		client.setCameraYawTarget((client.getCameraYawTarget() + dx) & 2047);
-		
+
 		int currentPitch = client.getCameraPitchTarget();
 		client.setCameraPitchTarget(Math.max(128, Math.min(383, currentPitch - dy)));
 	}
