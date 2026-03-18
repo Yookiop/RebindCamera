@@ -42,11 +42,11 @@ public interface RemapCameraConfig extends Config
 	}
 
 	@ConfigItem(
-			position = 3,
-			keyName = "invertCamera",
-			name = "Invert camera",
-			description = "Inverts the camera rotation direction. Enable this if the camera moves the wrong way.",
-			section = cameraSection
+		position = 3,
+		keyName = "invertCamera",
+		name = "Invert camera",
+		description = "Inverts the camera rotation direction. Enable this if the camera moves the wrong way.",
+		section = cameraSection
 	)
 	default boolean invertCamera()
 	{
