@@ -12,9 +12,9 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
 @PluginDescriptor(
-		name = "Remap Camera Rotation",
-		description = "Rotate the camera by holding a configurable key and moving the mouse",
-		tags = {"camera", "rotate", "remap"}
+	name = "Remap Camera Rotation",
+	description = "Rotate the camera by holding a configurable key and moving the mouse",
+	tags = {"camera", "rotate", "remap"}
 )
 public class RemapCameraPlugin extends Plugin
 {
