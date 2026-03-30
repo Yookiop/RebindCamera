@@ -1,6 +1,9 @@
 package com.remapcamera;
 
 import com.google.inject.Provides;
+import java.awt.MouseInfo;
+import java.awt.Point;
+import java.awt.PointerInfo;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.events.ClientTick;
@@ -33,11 +36,14 @@ public class RemapCameraPlugin extends Plugin
 	@Inject
 	private RemapCameraListener inputListener;
 
+	private Point lastMousePosition;
+
 	@Override
 	protected void startUp() throws Exception
 	{
 		keyManager.registerKeyListener(inputListener);
 		mouseManager.registerMouseListener(inputListener);
+		lastMousePosition = null;
 	}
 
 	@Override
@@ -45,31 +51,47 @@ public class RemapCameraPlugin extends Plugin
 	{
 		keyManager.unregisterKeyListener(inputListener);
 		mouseManager.unregisterMouseListener(inputListener);
-		inputListener.pendingDx.set(0);
-		inputListener.pendingDy.set(0);
+		lastMousePosition = null;
 	}
 
 	@Subscribe
 	public void onClientTick(ClientTick event)
 	{
-		int dx = inputListener.pendingDx.getAndSet(0);
-		int dy = inputListener.pendingDy.getAndSet(0);
+		if (!inputListener.isCameraRotateKeyPressed())
+		{
+			lastMousePosition = null;
+			return;
+		}
 
-		if (dx == 0 && dy == 0)
+		PointerInfo pointerInfo = MouseInfo.getPointerInfo();
+		if (pointerInfo == null)
 		{
 			return;
 		}
 
-		if (config.invertCamera())
+		Point currentPos = pointerInfo.getLocation();
+
+		if (lastMousePosition != null)
 		{
-			dx = -dx;
-			dy = -dy;
+			int dx = currentPos.x - lastMousePosition.x;
+			int dy = currentPos.y - lastMousePosition.y;
+
+			if (dx != 0 || dy != 0)
+			{
+				if (config.invertCamera())
+				{
+					dx = -dx;
+					dy = -dy;
+				}
+
+				client.setCameraYawTarget((client.getCameraYawTarget() + dx) & 2047);
+
+				int currentPitch = client.getCameraPitchTarget();
+				client.setCameraPitchTarget(Math.max(128, Math.min(383, currentPitch - dy)));
+			}
 		}
 
-		client.setCameraYawTarget((client.getCameraYawTarget() + dx) & 2047);
-
-		int currentPitch = client.getCameraPitchTarget();
-		client.setCameraPitchTarget(Math.max(128, Math.min(383, currentPitch - dy)));
+		lastMousePosition = currentPos;
 	}
 
 	@Provides
