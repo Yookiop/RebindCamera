@@ -6,9 +6,10 @@ import java.awt.Point;
 import java.awt.PointerInfo;
 import javax.inject.Inject;
 import net.runelite.api.Client;
-import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.BeforeRender;
-import net.runelite.api.events.ScriptCallbackEvent;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.gameval.VarClientID;
+import net.runelite.api.widgets.Widget;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.input.KeyManager;
@@ -40,7 +41,7 @@ public class RemapCameraPlugin extends Plugin
 
 	private Point lastMousePosition;
 
-	@Override
+    @Override
 	protected void startUp() throws Exception
 	{
 		keyManager.registerKeyListener(inputListener);
@@ -62,6 +63,9 @@ public class RemapCameraPlugin extends Plugin
 		if (!inputListener.isCameraRotateKeyPressed())
 		{
 			lastMousePosition = null;
+			return;
+		}
+		if (isDialogOpen()){
 			return;
 		}
 
@@ -98,6 +102,29 @@ public class RemapCameraPlugin extends Plugin
 		}
 
 		lastMousePosition = currentPos;
+	}
+
+	/**
+	 * Check if a dialog is open that will grab numerical input, to prevent F-key remapping
+	 * from triggering.
+	 *
+	 * @return
+	 */
+	public boolean isDialogOpen()
+	{
+		// Most chat dialogs with numerical input are added without the chatbox or its key listener being removed,
+		// so chatboxFocused() is true. The chatbox onkey script uses the following logic to ignore key presses,
+		// so we will use it too to not remap keys.
+		return isHidden(InterfaceID.Chatbox.MES_LAYER_HIDE) || isHidden(InterfaceID.Chatbox.CHATDISPLAY)
+				// We want to block camera remapping in the bank pin interface too, so it does not interfere with the
+				// Keyboard Bankpin feature of the Bank plugin
+				|| !isHidden(InterfaceID.BankpinKeypad.UNIVERSE);
+	}
+
+	private boolean isHidden(int component)
+	{
+		Widget w = client.getWidget(component);
+		return w == null || w.isSelfHidden();
 	}
 
 	@Provides
