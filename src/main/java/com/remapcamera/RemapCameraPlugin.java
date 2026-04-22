@@ -78,6 +78,10 @@ public class RemapCameraPlugin extends Plugin
 
 			if (dx != 0 || dy != 0)
 			{
+
+				double scale = config.sensitivity() / 100.0;
+				dx = (int) Math.round(dx * scale);
+				dy = (int) Math.round(dy * scale);
 				if (config.invertCamera())
 				{
 					dx = -dx;

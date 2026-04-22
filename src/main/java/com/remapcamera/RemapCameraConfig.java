@@ -52,4 +52,16 @@ public interface RemapCameraConfig extends Config
 	{
 		return false;
 	}
+
+	@ConfigItem(
+			position = 4,
+			keyName = "sensitivity",
+			name = "Camera Sensitivity",
+			description = "Mouse sensitivity when rotating the camera. Default is 180. \n 180 is roughly the same sensitivity as the default game middleclick",
+			section = cameraSection
+	)
+	default int sensitivity()
+	{
+		return 180;
+	}
 }
