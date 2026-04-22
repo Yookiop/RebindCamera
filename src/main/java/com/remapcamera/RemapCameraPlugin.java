@@ -7,6 +7,8 @@ import java.awt.PointerInfo;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.events.ClientTick;
+import net.runelite.api.events.BeforeRender;
+import net.runelite.api.events.ScriptCallbackEvent;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.input.KeyManager;
@@ -55,7 +57,7 @@ public class RemapCameraPlugin extends Plugin
 	}
 
 	@Subscribe
-	public void onClientTick(ClientTick event)
+	public void onBeforeRender(BeforeRender event)
 	{
 		if (!inputListener.isCameraRotateKeyPressed())
 		{
