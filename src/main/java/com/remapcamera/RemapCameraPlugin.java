@@ -107,8 +107,6 @@ public class RemapCameraPlugin extends Plugin
 	/**
 	 * Check if a dialog is open that will grab numerical input, to prevent F-key remapping
 	 * from triggering.
-	 *
-	 * @return
 	 */
 	public boolean isDialogOpen()
 	{

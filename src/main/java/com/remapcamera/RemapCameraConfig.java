@@ -5,6 +5,7 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.Range;
 import net.runelite.client.config.ModifierlessKeybind;
 
 @ConfigGroup("remapCamera")
@@ -64,6 +65,7 @@ public interface RemapCameraConfig extends Config
 		return false;
 	}
 
+	@Range(min = 1, max = 500)
 	@ConfigItem(
 			position = 4,
 			keyName = "sensitivity",
