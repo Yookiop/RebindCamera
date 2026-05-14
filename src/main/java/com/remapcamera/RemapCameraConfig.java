@@ -57,7 +57,7 @@ public interface RemapCameraConfig extends Config
 			position = 3,
 			keyName = "respectDialogues",
 			name = "Respect dialogues",
-			description = "The plugin will respect dialogues and not run when a dialogue or interface is open",
+			description = "The plugin will respect dialogues and not run when a dialogue or interface is open.",
 			section = cameraSection
 	)
 	default boolean respectDialogues()
@@ -69,8 +69,8 @@ public interface RemapCameraConfig extends Config
 	@ConfigItem(
 			position = 4,
 			keyName = "sensitivity",
-			name = "Camera Sensitivity",
-			description = "Mouse sensitivity when rotating the camera. Default is 180 which is roughly the same as middleclick camera rotation",
+			name = "Camera sensitivity",
+			description = "Mouse sensitivity when rotating the camera. Default is 180 which is around the same as middle mouse click camera rotation.",
 			section = cameraSection
 	)
 	default int sensitivity()
