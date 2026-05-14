@@ -10,6 +10,8 @@ public class RemapCameraListener implements KeyListener, MouseListener
 {
 	@Inject
 	private RemapCameraConfig config;
+	@Inject
+	private RemapCameraPlugin plugin;
 
 	private volatile boolean cameraRotateKeyPressed = false;
 
@@ -28,6 +30,12 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	{
 		if (config.cameraRotateRemap() && config.cameraRotateKey().matches(e))
 		{
+
+			if (config.respectDialogues()){
+   				if (plugin.isDialogOpen()){
+					return;
+				}
+			}
 			cameraRotateKeyPressed = true;
 			e.consume();
 		}
