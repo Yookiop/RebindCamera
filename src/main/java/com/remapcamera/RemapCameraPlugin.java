@@ -18,9 +18,9 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
 @PluginDescriptor(
-	name = "Remap Camera Rotation",
-	description = "Rotate the camera by holding a configurable key and moving the mouse",
-	tags = {"camera", "rotate", "remap"}
+		name = "Remap Camera Rotation",
+		description = "Rotate the camera by holding a configurable key and moving the mouse",
+		tags = {"camera", "rotate", "remap"}
 )
 public class RemapCameraPlugin extends Plugin
 {
@@ -41,7 +41,7 @@ public class RemapCameraPlugin extends Plugin
 
 	private Point lastMousePosition;
 
-    @Override
+	@Override
 	protected void startUp() throws Exception
 	{
 		keyManager.registerKeyListener(inputListener);
@@ -94,10 +94,12 @@ public class RemapCameraPlugin extends Plugin
 					dy = -dy;
 				}
 
-				client.setCameraYawTarget((client.getCameraYawTarget() + dx) & 2047);
+				// UPDATED: Yaw scale increased from 2047 to 16383
+				client.setCameraYawTarget((client.getCameraYawTarget() + dx) & 16383);
 
 				int currentPitch = client.getCameraPitchTarget();
-				client.setCameraPitchTarget(Math.max(128, Math.min(383, currentPitch - dy)));
+				// UPDATED: Pitch bounds multiplied by 8 (Old: 128-383 | New: 1024-3064)
+				client.setCameraPitchTarget(Math.max(1024, Math.min(3064, currentPitch - dy)));
 			}
 		}
 
