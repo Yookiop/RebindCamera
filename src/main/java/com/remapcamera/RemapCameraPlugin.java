@@ -9,7 +9,6 @@ import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.events.BeforeRender;
 import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.gameval.VarClientID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigManager;
