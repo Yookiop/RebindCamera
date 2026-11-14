@@ -1,21 +1,11 @@
 package com.remapcamera;
 
 import com.google.inject.Provides;
-import java.awt.Component;
-import java.awt.KeyEventDispatcher;
-import java.awt.KeyboardFocusManager;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.PointerInfo;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
-import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.events.BeforeRender;
 import net.runelite.api.gameval.InterfaceID;
@@ -79,27 +69,6 @@ public class RemapCameraPlugin extends Plugin
 
 	private final CameraSpeed cameraSpeed = new CameraSpeed();
 
-	private final Set<Integer> heldKeys = ConcurrentHashMap.newKeySet();
-
-	/**
-	 * Watches the keyboard before the game and before other plugins, so the arrow keys are seen even
-	 * when something else consumes them. The event is never consumed here.
-	 */
-	private final KeyEventDispatcher keyTracker = this::trackKey;
-
-	private final FocusListener canvasFocusListener = new FocusAdapter()
-	{
-		@Override
-		public void focusLost(FocusEvent event)
-		{
-			// The release of a key that is held while the game loses focus is delivered to the window
-			// that gets the focus instead, so it would otherwise stay stuck.
-			heldKeys.clear();
-		}
-	};
-
-	private KeyboardFocusManager keyboardFocusManager;
-
 	private Point lastMousePosition;
 
 	private net.runelite.api.Point lastCanvasMouse;
@@ -111,20 +80,6 @@ public class RemapCameraPlugin extends Plugin
 		mouseManager.registerMouseListener(inputListener);
 		overlayManager.add(keyOverlay);
 		lastMousePosition = null;
-		heldKeys.clear();
-
-		SwingUtilities.invokeLater(() ->
-		{
-			Component canvas = client.getCanvas();
-
-			if (canvas != null)
-			{
-				canvas.addFocusListener(canvasFocusListener);
-			}
-
-			keyboardFocusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-			keyboardFocusManager.addKeyEventDispatcher(keyTracker);
-		});
 	}
 
 	@Override
@@ -134,24 +89,10 @@ public class RemapCameraPlugin extends Plugin
 		mouseManager.unregisterMouseListener(inputListener);
 		overlayManager.remove(keyOverlay);
 		lastMousePosition = null;
-		heldKeys.clear();
 
-		// Queued behind the startup task, so an add and a remove can never be reordered.
-		SwingUtilities.invokeLater(() ->
-		{
-			Component canvas = client.getCanvas();
-
-			if (canvas != null)
-			{
-				canvas.removeFocusListener(canvasFocusListener);
-			}
-
-			if (keyboardFocusManager != null)
-			{
-				keyboardFocusManager.removeKeyEventDispatcher(keyTracker);
-				keyboardFocusManager = null;
-			}
-		});
+		// The release of a key that is held while the plugin is turned off is never seen, so it
+		// would otherwise stay held for the indicator.
+		inputListener.reset();
 	}
 
 	@Subscribe
@@ -183,7 +124,8 @@ public class RemapCameraPlugin extends Plugin
 			// the camera is rotated, and while the client is dragging its own camera with the mouse,
 			// only that rotation may move the camera.
 			boolean mouseMoved = mouseMoved();
-			boolean clientDrivesCamera = clientCameraDrag() && (mouseMoved || heldKeys.isEmpty());
+			boolean clientDrivesCamera = clientCameraDrag()
+				&& (mouseMoved || !inputListener.isCameraKeyHeld());
 
 			cameraSpeed.update(yaw, pitch, cameraSpeed(), clientDrivesCamera,
 				rotating && !clientDrivesCamera);
@@ -329,56 +271,13 @@ public class RemapCameraPlugin extends Plugin
 	/** Whether the plugin currently sees a camera key, for the info overlay. */
 	boolean cameraKeysHeld()
 	{
-		return !heldKeys.isEmpty();
+		return inputListener.isCameraKeyHeld();
 	}
 
-	private boolean trackKey(KeyEvent event)
-	{
-		int keyCode = event.getKeyCode();
-
-		if (event.getID() == KeyEvent.KEY_RELEASED)
-		{
-			heldKeys.remove(keyCode);
-
-			return false;
-		}
-
-		if (event.getID() != KeyEvent.KEY_PRESSED || !gameCanvasFocused() || isTyping())
-		{
-			return false;
-		}
-
-		if (isCameraKey(keyCode))
-		{
-			heldKeys.add(keyCode);
-		}
-
-		return false;
-	}
-
-	private boolean gameCanvasFocused()
-	{
-		Component canvas = client.getCanvas();
-
-		if (canvas == null)
-		{
-			return false;
-		}
-
-		Component focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-
-		return focusOwner != null && SwingUtilities.isDescendingFrom(focusOwner, canvas);
-	}
-
-	private boolean isTyping()
+	/** Whether the player is typing in the chatbox or another text field of the client. */
+	boolean isTyping()
 	{
 		return client.getFocusedInputFieldWidget() != null;
-	}
-
-	private static boolean isCameraKey(int keyCode)
-	{
-		return keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_DOWN
-			|| keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT;
 	}
 
 	/**
