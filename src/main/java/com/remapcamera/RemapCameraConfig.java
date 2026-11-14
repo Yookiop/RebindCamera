@@ -121,12 +121,12 @@ public interface RemapCameraConfig extends Config
 			position = 7,
 			keyName = "indicatorText",
 			name = "Indicator text",
-			description = "The text of the indicator, for example 5s.",
+			description = "The text of the indicator, for example a check mark or 5s.",
 			section = indicatorSection
 	)
 	default String indicatorText()
 	{
-		return "5s";
+		return "✓";
 	}
 
 	@Alpha
