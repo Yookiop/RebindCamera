@@ -34,6 +34,14 @@ class CameraSpeed
 		return pitch;
 	}
 
+	/** Forgets the camera position, so that the next frame takes it over again. */
+	void reset()
+	{
+		yaw = -1;
+		yawRemainder = 0;
+		pitchRemainder = 0;
+	}
+
 	/** Remembers a target that was written without the plugin scaling it. */
 	void written(int yawTarget, int pitchTarget)
 	{

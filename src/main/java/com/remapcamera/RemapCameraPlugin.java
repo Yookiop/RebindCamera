@@ -158,20 +158,38 @@ public class RemapCameraPlugin extends Plugin
 	public void onBeforeRender(BeforeRender event)
 	{
 		boolean rotating = inputListener.isCameraRotateKeyPressed() && !isDialogOpen();
+		boolean scaleKeys = config.cameraKeysEnabled();
+
+		if (!scaleKeys)
+		{
+			// With the camera key configuration off the plugin behaves like it did before those
+			// options existed: the arrow keys are left to the client and only the rotation is written.
+			cameraSpeed.reset();
+
+			if (!rotating)
+			{
+				lastMousePosition = null;
+
+				return;
+			}
+		}
 
 		int yaw = client.getCameraYawTarget();
 		int pitch = client.getCameraPitchTarget();
 
-		// The arrow keys are scaled, not blocked, so the game keeps seeing them as input. While the
-		// camera is rotated, and while the client is dragging its own camera with the mouse, only
-		// that rotation may move the camera.
-		boolean mouseMoved = mouseMoved();
-		boolean clientDrivesCamera = clientCameraDrag() && (mouseMoved || heldKeys.isEmpty());
+		if (scaleKeys)
+		{
+			// The arrow keys are scaled, not blocked, so the game keeps seeing them as input. While
+			// the camera is rotated, and while the client is dragging its own camera with the mouse,
+			// only that rotation may move the camera.
+			boolean mouseMoved = mouseMoved();
+			boolean clientDrivesCamera = clientCameraDrag() && (mouseMoved || heldKeys.isEmpty());
 
-		cameraSpeed.update(yaw, pitch, cameraSpeed(), clientDrivesCamera,
-			rotating && !clientDrivesCamera);
-		yaw = cameraSpeed.yaw();
-		pitch = cameraSpeed.pitch();
+			cameraSpeed.update(yaw, pitch, cameraSpeed(), clientDrivesCamera,
+				rotating && !clientDrivesCamera);
+			yaw = cameraSpeed.yaw();
+			pitch = cameraSpeed.pitch();
+		}
 
 		if (!rotating)
 		{
@@ -211,7 +229,11 @@ public class RemapCameraPlugin extends Plugin
 
 		client.setCameraYawTarget(yaw);
 		client.setCameraPitchTarget(pitch);
-		cameraSpeed.written(yaw, pitch);
+
+		if (scaleKeys)
+		{
+			cameraSpeed.written(yaw, pitch);
+		}
 	}
 
 	/**

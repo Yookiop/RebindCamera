@@ -37,7 +37,7 @@ class CameraKeyOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (!config.keyIndicatorEnabled() || !plugin.cameraKeysHeld())
+		if (!config.cameraKeysEnabled() || !config.keyIndicatorEnabled() || !plugin.cameraKeysHeld())
 		{
 			return null;
 		}

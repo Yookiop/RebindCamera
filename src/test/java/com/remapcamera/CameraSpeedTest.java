@@ -35,6 +35,22 @@ public class CameraSpeedTest
 	}
 
 	@Test
+	public void aResetTakesTheCameraPositionAgain()
+	{
+		frame(0, 0.1);
+
+		for (int i = 0; i < 20; i++)
+		{
+			frame(24, 0.1);
+		}
+
+		speed.reset();
+		speed.update(yaw, pitch, 0, false, false);
+
+		assertEquals(yaw, speed.yaw());
+	}
+
+	@Test
 	public void fullSpeedFollowsTheClient()
 	{
 		frame(0, 1);

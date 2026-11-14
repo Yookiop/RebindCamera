@@ -14,8 +14,8 @@ import net.runelite.client.config.ModifierlessKeybind;
 public interface RemapCameraConfig extends Config
 {
 	@ConfigSection(
-			name = "Camera Remapping",
-			description = "Settings for remapping the camera",
+			name = "Free look camera",
+			description = "Settings for remapping the free look camera",
 			position = 0
 	)
 	String cameraSection = "camera";
@@ -57,7 +57,7 @@ public interface RemapCameraConfig extends Config
 	}
 
 	@ConfigItem(
-			position = 3,
+			position = 4,
 			keyName = "respectDialogues",
 			name = "Respect dialogues",
 			description = "The plugin will respect dialogues and not run when a dialogue or interface is open.",
@@ -68,24 +68,9 @@ public interface RemapCameraConfig extends Config
 		return false;
 	}
 
-	@Range(min = 0, max = 20)
-	@ConfigItem(
-			position = 5,
-			keyName = "cameraSpeed",
-			name = "Camera key speed",
-			description = "Speed of the arrow key camera as a fraction of the normal speed: 1 = normal, " +
-					"0.5 = half, 0 = the arrow keys no longer move the camera but still count as input " +
-					"for the game. Independent of the camera rotation above.",
-			section = cameraSection
-	)
-	default double cameraSpeed()
-	{
-		return 1;
-	}
-
 	@Range(min = 1, max = 10000)
 	@ConfigItem(
-			position = 4,
+			position = 5,
 			keyName = "sensitivity",
 			name = "Camera sensitivity",
 			description = "Mouse sensitivity when rotating the camera. Default is 1440 which is around the same as middle mouse click camera rotation.",
@@ -97,20 +82,48 @@ public interface RemapCameraConfig extends Config
 	}
 
 	@ConfigSection(
-			name = "Camera key indicator",
-			description = "Everything below only does something while the camera key indicator is on.",
+			name = "Camera keys",
+			description = "Settings for the arrow key camera. Nothing below does anything while it is off.",
 			position = 1,
 			closedByDefault = true
 	)
-	String indicatorSection = "indicator";
+	String cameraKeysSection = "cameraKeys";
 
 	@ConfigItem(
-			position = 6,
+			position = 1,
+			keyName = "cameraKeysEnabled",
+			name = "Use camera key configuration",
+			description = "Enables everything below it. While it is off the plugin does not touch the " +
+					"arrow key camera at all and only the free look camera of the section above is used.",
+			section = cameraKeysSection
+	)
+	default boolean cameraKeysEnabled()
+	{
+		return false;
+	}
+
+	@Range(min = 0, max = 20)
+	@ConfigItem(
+			position = 2,
+			keyName = "cameraSpeed",
+			name = "Camera key speed",
+			description = "Speed of the arrow key camera as a fraction of the normal speed: 1 = normal, " +
+					"0.5 = half, 0 = the arrow keys no longer move the camera but still count as input " +
+					"for the game.",
+			section = cameraKeysSection
+	)
+	default double cameraSpeed()
+	{
+		return 1;
+	}
+
+	@ConfigItem(
+			position = 3,
 			keyName = "keyIndicatorEnabled",
 			name = "Show camera key indicator",
 			description = "Shows the indicator while a camera key is held. It is drawn without a " +
 					"background on top of everything, so it can be placed over another overlay.",
-			section = indicatorSection
+			section = cameraKeysSection
 	)
 	default boolean keyIndicatorEnabled()
 	{
@@ -118,11 +131,11 @@ public interface RemapCameraConfig extends Config
 	}
 
 	@ConfigItem(
-			position = 7,
+			position = 4,
 			keyName = "indicatorText",
 			name = "Indicator text",
 			description = "The text of the indicator, for example a check mark or 5s.",
-			section = indicatorSection
+			section = cameraKeysSection
 	)
 	default String indicatorText()
 	{
@@ -131,11 +144,11 @@ public interface RemapCameraConfig extends Config
 
 	@Alpha
 	@ConfigItem(
-			position = 8,
+			position = 5,
 			keyName = "indicatorColor",
 			name = "Indicator color",
 			description = "Colour of the indicator text.",
-			section = indicatorSection
+			section = cameraKeysSection
 	)
 	default Color indicatorColor()
 	{
@@ -144,11 +157,11 @@ public interface RemapCameraConfig extends Config
 
 	@Range(min = 8, max = 128)
 	@ConfigItem(
-			position = 9,
+			position = 6,
 			keyName = "indicatorSize",
 			name = "Indicator size",
 			description = "Font size of the indicator text.",
-			section = indicatorSection
+			section = cameraKeysSection
 	)
 	default int indicatorSize()
 	{
@@ -157,11 +170,11 @@ public interface RemapCameraConfig extends Config
 
 	@Range(min = -1000, max = 1000)
 	@ConfigItem(
-			position = 10,
+			position = 7,
 			keyName = "indicatorX",
 			name = "Indicator X offset",
 			description = "Horizontal offset from the top left of the game viewport, in pixels.",
-			section = indicatorSection
+			section = cameraKeysSection
 	)
 	default int indicatorX()
 	{
@@ -170,11 +183,11 @@ public interface RemapCameraConfig extends Config
 
 	@Range(min = -1000, max = 1000)
 	@ConfigItem(
-			position = 11,
+			position = 8,
 			keyName = "indicatorY",
 			name = "Indicator Y offset",
 			description = "Vertical offset from the top left of the game viewport, in pixels.",
-			section = indicatorSection
+			section = cameraKeysSection
 	)
 	default int indicatorY()
 	{
@@ -182,12 +195,12 @@ public interface RemapCameraConfig extends Config
 	}
 
 	@ConfigItem(
-			position = 12,
+			position = 9,
 			keyName = "indicatorRespectChatbox",
 			name = "Respect chatbox",
 			description = "Moves the indicator while the chatbox is open, because the game moves its " +
 					"own overlays then too. Use the offset below to set how far.",
-			section = indicatorSection
+			section = cameraKeysSection
 	)
 	default boolean indicatorRespectChatbox()
 	{
@@ -196,12 +209,12 @@ public interface RemapCameraConfig extends Config
 
 	@Range(min = -1000, max = 1000)
 	@ConfigItem(
-			position = 13,
+			position = 10,
 			keyName = "indicatorChatboxY",
 			name = "Chatbox Y offset",
 			description = "How many pixels the indicator moves while the chatbox is open. A negative " +
 					"number moves it up.",
-			section = indicatorSection
+			section = cameraKeysSection
 	)
 	default int indicatorChatboxY()
 	{
