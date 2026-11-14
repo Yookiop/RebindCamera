@@ -13,10 +13,6 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
-/**
- * Draws a short text while the plugin sees a camera key, on top of everything else and without a
- * background, so it can be placed over another overlay such as the escape crystal timer.
- */
 class CameraKeyOverlay extends Overlay
 {
 	private final Client client;

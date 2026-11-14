@@ -107,9 +107,7 @@ public interface RemapCameraConfig extends Config
 			position = 2,
 			keyName = "cameraSpeed",
 			name = "Camera key speed",
-			description = "Speed of the arrow key camera as a fraction of the normal speed: 1 = normal, " +
-					"0.5 = half, 0 = the arrow keys no longer move the camera but still count as input " +
-					"for the game.",
+			description = "Speed of the arrow key camera as a fraction of the normal speed: 1 = normal",
 			section = cameraKeysSection
 	)
 	default double cameraSpeed()
@@ -121,8 +119,7 @@ public interface RemapCameraConfig extends Config
 			position = 3,
 			keyName = "keyIndicatorEnabled",
 			name = "Show camera key indicator",
-			description = "Shows the indicator while a camera key is held. It is drawn without a " +
-					"background on top of everything, so it can be placed over another overlay.",
+			description = "Shows the indicator while a camera key is held.",
 			section = cameraKeysSection
 	)
 	default boolean keyIndicatorEnabled()
@@ -134,7 +131,7 @@ public interface RemapCameraConfig extends Config
 			position = 4,
 			keyName = "indicatorText",
 			name = "Indicator text",
-			description = "The text of the indicator, for example a check mark or 5s.",
+			description = "The text of the indicator, for example a check mark.",
 			section = cameraKeysSection
 	)
 	default String indicatorText()
