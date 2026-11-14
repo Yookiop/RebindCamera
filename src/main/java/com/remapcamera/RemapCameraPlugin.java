@@ -1,10 +1,21 @@
 package com.remapcamera;
 
 import com.google.inject.Provides;
+import java.awt.Component;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.PointerInfo;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
+import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.events.BeforeRender;
 import net.runelite.api.gameval.InterfaceID;
@@ -16,14 +27,21 @@ import net.runelite.client.input.KeyManager;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 
 @PluginDescriptor(
 		name = "Remap Camera Rotation",
-		description = "Rotate the camera by holding a configurable key and moving the mouse",
-		tags = {"camera", "rotate", "remap"}
+		description = "Rotate the camera by holding a configurable key and moving the mouse, and" +
+			" adjust the speed of the arrow key camera",
+		tags = {"camera", "rotate", "speed", "remap"}
 )
 public class RemapCameraPlugin extends Plugin
 {
+	private static final int YAW_UNITS = 16384;
+	private static final int PITCH_MIN = 1024;
+	private static final int PITCH_MAX = 3064;
+	private static final double MAX_SPEED = 20;
+
 	@Inject
 	private Client client;
 
@@ -34,10 +52,39 @@ public class RemapCameraPlugin extends Plugin
 	private MouseManager mouseManager;
 
 	@Inject
+	private OverlayManager overlayManager;
+
+	@Inject
 	private RemapCameraConfig config;
 
 	@Inject
 	private RemapCameraListener inputListener;
+
+	@Inject
+	private CameraKeyOverlay keyOverlay;
+
+	private final CameraSpeed cameraSpeed = new CameraSpeed();
+
+	private final Set<Integer> heldKeys = ConcurrentHashMap.newKeySet();
+
+	/**
+	 * Watches the keyboard before the game and before other plugins, so the arrow keys are seen even
+	 * when something else consumes them. The event is never consumed here.
+	 */
+	private final KeyEventDispatcher keyTracker = this::trackKey;
+
+	private final FocusListener canvasFocusListener = new FocusAdapter()
+	{
+		@Override
+		public void focusLost(FocusEvent event)
+		{
+			// The release of a key that is held while the game loses focus is delivered to the window
+			// that gets the focus instead, so it would otherwise stay stuck.
+			heldKeys.clear();
+		}
+	};
+
+	private KeyboardFocusManager keyboardFocusManager;
 
 	private Point lastMousePosition;
 
@@ -46,7 +93,22 @@ public class RemapCameraPlugin extends Plugin
 	{
 		keyManager.registerKeyListener(inputListener);
 		mouseManager.registerMouseListener(inputListener);
+		overlayManager.add(keyOverlay);
 		lastMousePosition = null;
+		heldKeys.clear();
+
+		SwingUtilities.invokeLater(() ->
+		{
+			Component canvas = client.getCanvas();
+
+			if (canvas != null)
+			{
+				canvas.addFocusListener(canvasFocusListener);
+			}
+
+			keyboardFocusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+			keyboardFocusManager.addKeyEventDispatcher(keyTracker);
+		});
 	}
 
 	@Override
@@ -54,56 +116,161 @@ public class RemapCameraPlugin extends Plugin
 	{
 		keyManager.unregisterKeyListener(inputListener);
 		mouseManager.unregisterMouseListener(inputListener);
+		overlayManager.remove(keyOverlay);
 		lastMousePosition = null;
+		heldKeys.clear();
+
+		// Queued behind the startup task, so an add and a remove can never be reordered.
+		SwingUtilities.invokeLater(() ->
+		{
+			Component canvas = client.getCanvas();
+
+			if (canvas != null)
+			{
+				canvas.removeFocusListener(canvasFocusListener);
+			}
+
+			if (keyboardFocusManager != null)
+			{
+				keyboardFocusManager.removeKeyEventDispatcher(keyTracker);
+				keyboardFocusManager = null;
+			}
+		});
 	}
 
 	@Subscribe
 	public void onBeforeRender(BeforeRender event)
 	{
-		if (!inputListener.isCameraRotateKeyPressed())
+		boolean rotating = inputListener.isCameraRotateKeyPressed() && !isDialogOpen();
+
+		int yaw = client.getCameraYawTarget();
+		int pitch = client.getCameraPitchTarget();
+
+		// The arrow keys are scaled, not blocked, so the game keeps seeing them as input. While the
+		// camera is rotated, and while the client is dragging its own camera with a mouse button,
+		// only that rotation may move the camera.
+		boolean clientDrivesCamera = clientCameraButtonDown();
+
+		cameraSpeed.update(yaw, pitch, cameraSpeed(), clientDrivesCamera,
+			rotating && !clientDrivesCamera);
+		yaw = cameraSpeed.yaw();
+		pitch = cameraSpeed.pitch();
+
+		if (!rotating)
 		{
 			lastMousePosition = null;
-			return;
 		}
-		if (isDialogOpen()){
-			return;
-		}
-
-		PointerInfo pointerInfo = MouseInfo.getPointerInfo();
-		if (pointerInfo == null)
+		else
 		{
-			return;
-		}
+			PointerInfo pointerInfo = MouseInfo.getPointerInfo();
+			Point currentPos = pointerInfo != null ? pointerInfo.getLocation() : null;
 
-		Point currentPos = pointerInfo.getLocation();
-
-		if (lastMousePosition != null)
-		{
-			int dx = currentPos.x - lastMousePosition.x;
-			int dy = currentPos.y - lastMousePosition.y;
-
-			if (dx != 0 || dy != 0)
+			if (currentPos != null)
 			{
-
-				double scale = config.sensitivity() / 100.0;
-				dx = (int) Math.round(dx * scale);
-				dy = (int) Math.round(dy * scale);
-				if (config.invertCamera())
+				if (lastMousePosition != null)
 				{
-					dx = -dx;
-					dy = -dy;
+					int dx = currentPos.x - lastMousePosition.x;
+					int dy = currentPos.y - lastMousePosition.y;
+
+					if (dx != 0 || dy != 0)
+					{
+						double scale = config.sensitivity() / 100.0;
+						dx = (int) Math.round(dx * scale);
+						dy = (int) Math.round(dy * scale);
+						if (config.invertCamera())
+						{
+							dx = -dx;
+							dy = -dy;
+						}
+
+						yaw = (yaw + dx) & (YAW_UNITS - 1);
+						pitch = Math.max(PITCH_MIN, Math.min(PITCH_MAX, pitch - dy));
+					}
 				}
 
-				// UPDATED: Yaw scale increased from 2047 to 16383
-				client.setCameraYawTarget((client.getCameraYawTarget() + dx) & 16383);
-
-				int currentPitch = client.getCameraPitchTarget();
-				// UPDATED: Pitch bounds multiplied by 8 (Old: 128-383 | New: 1024-3064)
-				client.setCameraPitchTarget(Math.max(1024, Math.min(3064, currentPitch - dy)));
+				lastMousePosition = currentPos;
 			}
 		}
 
-		lastMousePosition = currentPos;
+		client.setCameraYawTarget(yaw);
+		client.setCameraPitchTarget(pitch);
+		cameraSpeed.written(yaw, pitch);
+	}
+
+	/** The configured camera key speed, clamped to the range the config allows. */
+	private double cameraSpeed()
+	{
+		double speed = config.cameraSpeed();
+
+		if (!(speed > 0))
+		{
+			return 0;
+		}
+
+		return Math.min(speed, MAX_SPEED);
+	}
+
+	/** The client moves its camera from the mouse alone while a camera mouse button is held. */
+	private boolean clientCameraButtonDown()
+	{
+		int button = client.getMouseCurrentButton();
+
+		return button == MouseEvent.BUTTON2 || button == 4;
+	}
+
+	/** Whether the plugin currently sees a camera key, for the info overlay. */
+	boolean cameraKeysHeld()
+	{
+		return !heldKeys.isEmpty();
+	}
+
+	private boolean trackKey(KeyEvent event)
+	{
+		int keyCode = event.getKeyCode();
+
+		if (event.getID() == KeyEvent.KEY_RELEASED)
+		{
+			heldKeys.remove(keyCode);
+
+			return false;
+		}
+
+		if (event.getID() != KeyEvent.KEY_PRESSED || !gameCanvasFocused() || isTyping())
+		{
+			return false;
+		}
+
+		if (isCameraKey(keyCode))
+		{
+			heldKeys.add(keyCode);
+		}
+
+		return false;
+	}
+
+	private boolean gameCanvasFocused()
+	{
+		Component canvas = client.getCanvas();
+
+		if (canvas == null)
+		{
+			return false;
+		}
+
+		Component focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+
+		return focusOwner != null && SwingUtilities.isDescendingFrom(focusOwner, canvas);
+	}
+
+	private boolean isTyping()
+	{
+		return client.getFocusedInputFieldWidget() != null;
+	}
+
+	private static boolean isCameraKey(int keyCode)
+	{
+		return keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_DOWN
+			|| keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT;
 	}
 
 	/**

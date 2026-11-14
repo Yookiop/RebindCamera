@@ -1,6 +1,8 @@
 package com.remapcamera;
 
+import java.awt.Color;
 import java.awt.event.KeyEvent;
+import net.runelite.client.config.Alpha;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -66,6 +68,21 @@ public interface RemapCameraConfig extends Config
 		return false;
 	}
 
+	@Range(min = 0, max = 20)
+	@ConfigItem(
+			position = 5,
+			keyName = "cameraSpeed",
+			name = "Camera key speed",
+			description = "Speed of the arrow key camera as a fraction of the normal speed: 1 = normal, " +
+					"0.5 = half, 0 = the arrow keys no longer move the camera but still count as input " +
+					"for the game. Independent of the camera rotation above.",
+			section = cameraSection
+	)
+	default double cameraSpeed()
+	{
+		return 1;
+	}
+
 	@Range(min = 1, max = 10000)
 	@ConfigItem(
 			position = 4,
@@ -77,5 +94,117 @@ public interface RemapCameraConfig extends Config
 	default int sensitivity()
 	{
 		return 1440;
+	}
+
+	@ConfigSection(
+			name = "Camera key indicator",
+			description = "Everything below only does something while the camera key indicator is on.",
+			position = 1,
+			closedByDefault = true
+	)
+	String indicatorSection = "indicator";
+
+	@ConfigItem(
+			position = 6,
+			keyName = "keyIndicatorEnabled",
+			name = "Show camera key indicator",
+			description = "Shows the indicator while a camera key is held. It is drawn without a " +
+					"background on top of everything, so it can be placed over another overlay.",
+			section = indicatorSection
+	)
+	default boolean keyIndicatorEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+			position = 7,
+			keyName = "indicatorText",
+			name = "Indicator text",
+			description = "The text of the indicator, for example 5s.",
+			section = indicatorSection
+	)
+	default String indicatorText()
+	{
+		return "5s";
+	}
+
+	@Alpha
+	@ConfigItem(
+			position = 8,
+			keyName = "indicatorColor",
+			name = "Indicator color",
+			description = "Colour of the indicator text.",
+			section = indicatorSection
+	)
+	default Color indicatorColor()
+	{
+		return Color.GREEN;
+	}
+
+	@Range(min = 8, max = 128)
+	@ConfigItem(
+			position = 9,
+			keyName = "indicatorSize",
+			name = "Indicator size",
+			description = "Font size of the indicator text.",
+			section = indicatorSection
+	)
+	default int indicatorSize()
+	{
+		return 16;
+	}
+
+	@Range(min = -1000, max = 1000)
+	@ConfigItem(
+			position = 10,
+			keyName = "indicatorX",
+			name = "Indicator X offset",
+			description = "Horizontal offset from the top left of the game viewport, in pixels.",
+			section = indicatorSection
+	)
+	default int indicatorX()
+	{
+		return 0;
+	}
+
+	@Range(min = -1000, max = 1000)
+	@ConfigItem(
+			position = 11,
+			keyName = "indicatorY",
+			name = "Indicator Y offset",
+			description = "Vertical offset from the top left of the game viewport, in pixels.",
+			section = indicatorSection
+	)
+	default int indicatorY()
+	{
+		return 0;
+	}
+
+	@ConfigItem(
+			position = 12,
+			keyName = "indicatorRespectChatbox",
+			name = "Respect chatbox",
+			description = "Moves the indicator while the chatbox is open, because the game moves its " +
+					"own overlays then too. Use the offset below to set how far.",
+			section = indicatorSection
+	)
+	default boolean indicatorRespectChatbox()
+	{
+		return false;
+	}
+
+	@Range(min = -1000, max = 1000)
+	@ConfigItem(
+			position = 13,
+			keyName = "indicatorChatboxY",
+			name = "Chatbox Y offset",
+			description = "How many pixels the indicator moves while the chatbox is open. A negative " +
+					"number moves it up.",
+			section = indicatorSection
+	)
+	default int indicatorChatboxY()
+	{
+		return 0;
 	}
 }
