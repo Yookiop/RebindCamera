@@ -52,8 +52,6 @@ class CameraKeyOverlay extends Overlay
 		FontMetrics metrics = graphics.getFontMetrics();
 		int baseline = y + metrics.getAscent();
 
-		// A thin outline keeps the text readable on top of whatever is behind it, without drawing a
-		// background over it.
 		graphics.setColor(Color.BLACK);
 
 		for (int offsetX = -1; offsetX <= 1; offsetX++)
@@ -73,11 +71,6 @@ class CameraKeyOverlay extends Overlay
 		return new Dimension(x + metrics.stringWidth(text) + 2, y + metrics.getHeight());
 	}
 
-	/**
-	 * The game moves its own overlays when the chatbox is opened or closed, so the plugin has to
-	 * follow it. The chatbox is open when its chat area widget exists and is not hidden, which is the
-	 * same check the client uses for its own overlays.
-	 */
 	private int chatboxOffset()
 	{
 		if (!config.indicatorRespectChatbox())
