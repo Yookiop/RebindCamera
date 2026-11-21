@@ -18,7 +18,7 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 
 class CameraKeyOverlay extends Overlay
 {
-	/** The space the client keeps between the viewport and its top left overlays. */
+	/** The space the client's overlay renderer keeps between the viewport and its top left overlays. */
 	private static final int BORDER = 5;
 	private static final int BORDER_TOP = BORDER + 15;
 
@@ -92,9 +92,10 @@ class CameraKeyOverlay extends Overlay
 	}
 
 	/**
-	 * The place the client starts its stack of top left overlays, so the indicator keeps the spot it
-	 * was configured for. It is not part of that stack itself: another top left overlay, such as the
-	 * opponent info of a fight, would otherwise push it down until that overlay disappears again.
+	 * The place the client starts its stack of top left overlays (the margins and viewport widget of
+	 * {@code OverlayRenderer.positionSnapcorners}), so the indicator keeps the spot it was configured
+	 * for. It is not part of that stack itself: another top left overlay, such as the opponent info of
+	 * a fight, would otherwise push it down until that overlay disappears again.
 	 */
 	private Point topLeft()
 	{

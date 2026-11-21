@@ -12,8 +12,9 @@ package com.remapcamera;
  * over is kept for the next frame, so even a speed far below one camera unit per frame still moves
  * the camera.
  *
- * <p>Only movement of the keys is scaled. The compass sets an absolute target of its own, which is
- * passed through untouched so that one click still points the camera north.
+ * <p>The compass sets an absolute target instead of moving the camera like a key does, so it is
+ * passed through untouched: one click still has to point the camera north, whatever the configured
+ * speed.
  */
 class CameraSpeed
 {

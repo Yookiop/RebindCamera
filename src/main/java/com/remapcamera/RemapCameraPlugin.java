@@ -43,6 +43,9 @@ public class RemapCameraPlugin extends Plugin
 	private static final String CONFIG_GROUP =
 		RemapCameraConfig.class.getAnnotation(ConfigGroup.class).value();
 
+	/** The menu option of the compass, which is the only menu entry that has it. */
+	private static final String COMPASS_MENU_OPTION = "Look North";
+
 	@Inject
 	private Client client;
 
@@ -185,7 +188,7 @@ public class RemapCameraPlugin extends Plugin
 	@Subscribe
 	public void onMenuOptionClicked(MenuOptionClicked event)
 	{
-		if ("Look North".equals(event.getMenuOption()))
+		if (COMPASS_MENU_OPTION.equals(event.getMenuOption()))
 		{
 			inputListener.compassClicked();
 		}
