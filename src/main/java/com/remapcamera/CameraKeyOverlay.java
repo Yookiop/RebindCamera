@@ -33,7 +33,12 @@ class CameraKeyOverlay extends Overlay
 		this.plugin = plugin;
 		this.config = config;
 
-		setPosition(OverlayPosition.DYNAMIC);
+		// Overlays in a layer are ordered by their position before their priority, so any overlay
+		// with a fixed position is drawn after a dynamic one and would hide the text; the escape
+		// crystal widget, for example, sits at BOTTOM_LEFT. TOOLTIP is the last position in that
+		// order and, like DYNAMIC, is drawn where the plugin says instead of in a snap corner
+		// stack, so the text stays on top and stays where it was configured.
+		setPosition(OverlayPosition.TOOLTIP);
 		setLayer(OverlayLayer.ALWAYS_ON_TOP);
 	}
 
