@@ -4,12 +4,30 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
+import net.runelite.api.Client;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.widgets.Widget;
 import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.MouseListener;
 
 public class RemapCameraListener implements KeyListener, MouseListener
 {
+	/** The compass of every top level layout; only the one of the current layout exists. */
+	private static final int[] COMPASS_WIDGETS =
+	{
+		InterfaceID.ToplevelOsrsStretch.COMPASSCLICK,
+		InterfaceID.ToplevelPreEoc.COMPASSCLICK,
+		InterfaceID.Toplevel.COMPASSCLICK,
+		InterfaceID.ToplevelOsm.COMPASSCLICK
+	};
+
+	/** How long the target the compass sets is left alone, so it is never missed. */
+	private static final long COMPASS_CLICK_WINDOW_MS = 200;
+
+	@Inject
+	private Client client;
 	@Inject
 	private RemapCameraConfig config;
 	@Inject
@@ -23,6 +41,8 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	 */
 	private final Set<Integer> heldKeys = ConcurrentHashMap.newKeySet();
 
+	private volatile long compassClickUntil;
+
 	boolean isCameraRotateKeyPressed()
 	{
 		return cameraRotateKeyPressed;
@@ -33,11 +53,28 @@ public class RemapCameraListener implements KeyListener, MouseListener
 		return !heldKeys.isEmpty();
 	}
 
+	/**
+	 * Whether the compass was clicked just now. The compass sets the camera target to an absolute
+	 * angle instead of moving it like a key does, so the target has to be left alone right after
+	 * the click; scaling it would make the camera turn only part of the way to north.
+	 */
+	boolean isCompassClickActive()
+	{
+		return System.nanoTime() < compassClickUntil;
+	}
+
+	/** Starts the window in which the target the compass sets is not scaled. */
+	void compassClicked()
+	{
+		compassClickUntil = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(COMPASS_CLICK_WINDOW_MS);
+	}
+
 	/** Forgets every key, because their release is delivered to whichever window gets the focus. */
 	void reset()
 	{
 		heldKeys.clear();
 		cameraRotateKeyPressed = false;
+		compassClickUntil = 0;
 	}
 
 	@Override
@@ -99,7 +136,27 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	@Override
 	public MouseEvent mousePressed(MouseEvent e)
 	{
+		if (isCompassClick(e.getX(), e.getY()))
+		{
+			compassClicked();
+		}
+
 		return e;
+	}
+
+	private boolean isCompassClick(int x, int y)
+	{
+		for (int widgetId : COMPASS_WIDGETS)
+		{
+			Widget compass = client.getWidget(widgetId);
+
+			if (compass != null && compass.getBounds().contains(x, y))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	@Override

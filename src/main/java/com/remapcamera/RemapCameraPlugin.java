@@ -8,6 +8,7 @@ import java.awt.event.MouseEvent;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.events.BeforeRender;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.config.ConfigGroup;
@@ -127,7 +128,7 @@ public class RemapCameraPlugin extends Plugin
 				&& (mouseMoved || !inputListener.isCameraKeyHeld());
 
 			cameraSpeed.update(yaw, pitch, cameraSpeed(), clientDrivesCamera,
-				rotating && !clientDrivesCamera);
+				rotating && !clientDrivesCamera, inputListener.isCompassClickActive());
 			yaw = cameraSpeed.yaw();
 			pitch = cameraSpeed.pitch();
 		}
@@ -174,6 +175,19 @@ public class RemapCameraPlugin extends Plugin
 		if (scaleKeys)
 		{
 			cameraSpeed.written(yaw, pitch);
+		}
+	}
+
+	/**
+	 * The compass is also seen here, because its bounds and the mouse position do not have to be in
+	 * the same space when the game is stretched. Only the compass has this menu option.
+	 */
+	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		if ("Look North".equals(event.getMenuOption()))
+		{
+			inputListener.compassClicked();
 		}
 	}
 

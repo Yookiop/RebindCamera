@@ -14,13 +14,19 @@ public class CameraSpeedTest
 	/** One frame in which the client moved the camera by {@code movement}. */
 	private void frame(int movement, double scale)
 	{
-		frame(movement, scale, false, false);
+		frame(movement, scale, false, false, false);
 	}
 
 	private void frame(int movement, double scale, boolean clientDrivesCamera, boolean holdCamera)
 	{
+		frame(movement, scale, clientDrivesCamera, holdCamera, false);
+	}
+
+	private void frame(int movement, double scale, boolean clientDrivesCamera, boolean holdCamera,
+		boolean compassClick)
+	{
 		yaw += movement;
-		speed.update(yaw, pitch, scale, clientDrivesCamera, holdCamera);
+		speed.update(yaw, pitch, scale, clientDrivesCamera, holdCamera, compassClick);
 		yaw = speed.yaw();
 		pitch = speed.pitch();
 	}
@@ -28,7 +34,7 @@ public class CameraSpeedTest
 	@Test
 	public void theFirstFrameTakesTheCameraPosition()
 	{
-		speed.update(1234, PITCH, 0.5, false, false);
+		speed.update(1234, PITCH, 0.5, false, false, false);
 
 		assertEquals(1234, speed.yaw());
 		assertEquals(PITCH, speed.pitch());
@@ -45,7 +51,7 @@ public class CameraSpeedTest
 		}
 
 		speed.reset();
-		speed.update(yaw, pitch, 0, false, false);
+		speed.update(yaw, pitch, 0, false, false, false);
 
 		assertEquals(yaw, speed.yaw());
 	}
@@ -134,6 +140,62 @@ public class CameraSpeedTest
 	}
 
 	@Test
+	public void theCompassIsNeverScaled()
+	{
+		frame(0, 0.4);
+
+		frame(-2000, 0.4, false, false, true);
+
+		assertEquals((1000 - 2000) & 0x3FFF, yaw);
+	}
+
+	@Test
+	public void theCompassWorksAtZeroSpeed()
+	{
+		frame(0, 0);
+
+		frame(-2000, 0, false, false, true);
+
+		assertEquals((1000 - 2000) & 0x3FFF, yaw);
+	}
+
+	@Test
+	public void theCompassAlsoWorksWhileTheCameraIsRotated()
+	{
+		frame(0, 0.5);
+
+		frame(-2000, 0.5, false, true, true);
+
+		assertEquals((1000 - 2000) & 0x3FFF, yaw);
+	}
+
+	@Test
+	public void afterTheCompassTheKeysAreScaledAgain()
+	{
+		frame(0, 0.4);
+		frame(-2000, 0.4, false, false, true);
+
+		int compassTarget = yaw;
+		frame(24, 0.4);
+
+		assertEquals(compassTarget + 9, yaw);
+	}
+
+	@Test
+	public void theCompassLeavesThePitchToTheCameraKeys()
+	{
+		frame(0, 0.5);
+
+		int before = pitch;
+
+		pitch += 48;
+		speed.update(yaw, pitch, 0.5, false, false, true);
+		pitch = speed.pitch();
+
+		assertEquals(before + 24, pitch);
+	}
+
+	@Test
 	public void theYawWrapsAroundTheCircle()
 	{
 		yaw = 16380;
@@ -148,7 +210,7 @@ public class CameraSpeedTest
 	private void pitchFrame(int movement, double scale)
 	{
 		pitch += movement;
-		speed.update(yaw, pitch, scale, false, false);
+		speed.update(yaw, pitch, scale, false, false, false);
 		yaw = speed.yaw();
 		pitch = speed.pitch();
 	}

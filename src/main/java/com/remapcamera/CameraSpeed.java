@@ -11,6 +11,9 @@ package com.remapcamera;
  * its own acceleration curve, so the measured movement is the only truth. A fraction that is left
  * over is kept for the next frame, so even a speed far below one camera unit per frame still moves
  * the camera.
+ *
+ * <p>Only movement of the keys is scaled. The compass sets an absolute target of its own, which is
+ * passed through untouched so that one click still points the camera north.
  */
 class CameraSpeed
 {
@@ -59,9 +62,11 @@ class CameraSpeed
 	 *                           truth and nothing may be scaled
 	 * @param holdCamera         the camera is being rotated with the rotate key, so only that
 	 *                           rotation may move the camera
+	 * @param compassClick       the compass was clicked, which sets an absolute target that must
+	 *                           not be scaled, or it would take several clicks to point north
 	 */
 	void update(int yawTarget, int pitchTarget, double speed, boolean clientDrivesCamera,
-		boolean holdCamera)
+		boolean holdCamera, boolean compassClick)
 	{
 		if (yaw < 0 || clientDrivesCamera)
 		{
@@ -77,13 +82,28 @@ class CameraSpeed
 			yawRemainder = 0;
 			pitchRemainder = 0;
 
+			if (compassClick)
+			{
+				yaw = yawTarget & (YAW_UNITS - 1);
+			}
+
 			return;
 		}
 
-		int yawDelta = shortestRotation(yaw, yawTarget);
+		if (compassClick)
+		{
+			yawRemainder = 0;
+			yaw = yawTarget & (YAW_UNITS - 1);
+		}
+		else
+		{
+			int yawDelta = shortestRotation(yaw, yawTarget);
+
+			yaw = (yaw + scaled(yawDelta, speed, true)) & (YAW_UNITS - 1);
+		}
+
 		int pitchDelta = pitchTarget - pitch;
 
-		yaw = (yaw + scaled(yawDelta, speed, true)) & (YAW_UNITS - 1);
 		pitch = clamp(pitch + scaled(pitchDelta, speed, false));
 	}
 
