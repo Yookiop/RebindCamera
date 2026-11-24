@@ -20,6 +20,8 @@ import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @PluginDescriptor(
 		name = "Remap Camera Rotation",
@@ -29,6 +31,11 @@ import net.runelite.client.ui.overlay.OverlayManager;
 )
 public class RemapCameraPlugin extends Plugin
 {
+	private static final Logger log = LoggerFactory.getLogger(RemapCameraPlugin.class);
+
+	/** How often a running rotation writes a line to the debug log. */
+	private static final long ROTATION_LOG_INTERVAL_MS = 1000;
+
 	private static final int YAW_UNITS = 16384;
 	private static final int PITCH_MIN = 1024;
 	private static final int PITCH_MAX = 3064;
@@ -76,13 +83,27 @@ public class RemapCameraPlugin extends Plugin
 
 	private net.runelite.api.Point lastCanvasMouse;
 
+	/** The rotation state of the previous frame, so a start or stop is logged only once. */
+	private boolean lastRotating;
+
+	/** Whether the front place of the mouse listeners has been claimed after the client started. */
+	private boolean inputListenerInFront;
+
+	private long lastRotationLog;
+
 	@Override
 	protected void startUp() throws Exception
 	{
+		mouseManager.registerMouseListener(0, inputListener);
 		keyManager.registerKeyListener(inputListener);
-		mouseManager.registerMouseListener(inputListener);
 		overlayManager.add(keyOverlay);
 		lastMousePosition = null;
+		lastRotating = false;
+		inputListenerInFront = false;
+		lastRotationLog = 0;
+
+		log.debug("started: rotate key {}, rotate button {}, camera keys {}",
+			config.cameraRotateKey(), config.cameraRotateMouseButton(), config.cameraKeysEnabled());
 	}
 
 	@Override
@@ -96,13 +117,27 @@ public class RemapCameraPlugin extends Plugin
 		// The release of a key that is held while the plugin is turned off is never seen, so it
 		// would otherwise stay held for the indicator.
 		inputListener.reset();
+		log.debug("stopped");
 	}
 
 	@Subscribe
 	public void onBeforeRender(BeforeRender event)
 	{
-		boolean rotating = inputListener.isCameraRotateHeld() && !isDialogOpen();
+		claimFrontMouseListener();
+
+		boolean rotateHeld = inputListener.isCameraRotateHeld();
+		boolean rotating = rotateHeld && !isDialogOpen();
 		boolean scaleKeys = config.cameraKeysEnabled();
+
+		if (rotating != lastRotating)
+		{
+			lastRotating = rotating;
+			lastRotationLog = 0;
+
+			log.debug("rotation {}: rotate key {}, rotate button {}, dialogue open {}",
+				rotating ? "started" : "stopped", inputListener.isCameraRotateKeyHeld(),
+				inputListener.isCameraRotateButtonHeld(), rotateHeld && !rotating);
+		}
 
 		if (!scaleKeys)
 		{
@@ -165,6 +200,8 @@ public class RemapCameraPlugin extends Plugin
 
 						yaw = (yaw + dx) & (YAW_UNITS - 1);
 						pitch = Math.max(PITCH_MIN, Math.min(PITCH_MAX, pitch - dy));
+
+						logRotation(dx, dy, yaw, pitch);
 					}
 				}
 
@@ -210,6 +247,7 @@ public class RemapCameraPlugin extends Plugin
 		// The key or button that is held can be reconfigured while it is down, and its release
 		// would then no longer match.
 		inputListener.resetRotation();
+		log.debug("config {} changed to {}", event.getKey(), event.getNewValue());
 
 		if ("respectDialogues".equals(event.getKey())
 			&& Boolean.parseBoolean(event.getNewValue())
@@ -217,6 +255,43 @@ public class RemapCameraPlugin extends Plugin
 		{
 			configManager.setConfiguration(CONFIG_GROUP, "indicatorRespectChatbox", true);
 		}
+	}
+
+	/**
+	 * Puts the input listener in front of the mouse listeners once, after the client has started.
+	 *
+	 * <p>RuneLite consumes a press of a mouse button past the middle one before it walks its mouse
+	 * listeners, and that walk stops at the first listener it hands the consumed event, so such a
+	 * press only reaches the first registered listener. A plugin that claims the front place during
+	 * its own startup (the built-in stretched mode plugin does) would push this listener back, so
+	 * the place is claimed again on the first frame, when every plugin has started.
+	 */
+	private void claimFrontMouseListener()
+	{
+		if (inputListenerInFront)
+		{
+			return;
+		}
+
+		mouseManager.unregisterMouseListener(inputListener);
+		mouseManager.registerMouseListener(0, inputListener);
+		inputListenerInFront = true;
+
+		log.debug("input listener is in front of the mouse listeners");
+	}
+
+	/** Writes at most one line per second, so the log of a running rotation stays readable. */
+	private void logRotation(int dx, int dy, int yaw, int pitch)
+	{
+		long now = System.currentTimeMillis();
+
+		if (!log.isDebugEnabled() || now - lastRotationLog < ROTATION_LOG_INTERVAL_MS)
+		{
+			return;
+		}
+
+		lastRotationLog = now;
+		log.debug("rotating: dx {}, dy {}, yaw {}, pitch {}", dx, dy, yaw, pitch);
 	}
 
 	/** The configured camera key speed, clamped to the range the config allows. */

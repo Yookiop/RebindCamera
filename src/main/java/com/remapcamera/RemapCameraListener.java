@@ -11,9 +11,13 @@ import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.MouseListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RemapCameraListener implements KeyListener, MouseListener
 {
+	private static final Logger log = LoggerFactory.getLogger(RemapCameraListener.class);
+
 	/** The compass of every top level layout; only the one of the current layout exists. */
 	private static final int[] COMPASS_WIDGETS =
 	{
@@ -48,6 +52,16 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	boolean isCameraRotateHeld()
 	{
 		return cameraRotateKeyPressed || cameraRotateButtonPressed;
+	}
+
+	boolean isCameraRotateKeyHeld()
+	{
+		return cameraRotateKeyPressed;
+	}
+
+	boolean isCameraRotateButtonHeld()
+	{
+		return cameraRotateButtonPressed;
 	}
 
 	boolean isCameraKeyHeld()
@@ -85,6 +99,11 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	 */
 	void resetRotation()
 	{
+		if (cameraRotateKeyPressed || cameraRotateButtonPressed)
+		{
+			log.debug("forgetting rotation (key {} / button {})", cameraRotateKeyPressed, cameraRotateButtonPressed);
+		}
+
 		cameraRotateKeyPressed = false;
 		cameraRotateButtonPressed = false;
 	}
@@ -106,12 +125,14 @@ public class RemapCameraListener implements KeyListener, MouseListener
 		{
 			if (config.respectDialogues() && plugin.isDialogOpen())
 			{
+				log.debug("rotation key {} pressed but a dialogue is open", KeyEvent.getKeyText(e.getKeyCode()));
 				return;
 			}
 
 			// Observe only, so the event is not consumed: the client keeps its own key state either
 			// way, and consuming would only take the key's activity away from the game.
 			cameraRotateKeyPressed = true;
+			log.debug("rotation key {} held", KeyEvent.getKeyText(e.getKeyCode()));
 		}
 	}
 
@@ -123,12 +144,14 @@ public class RemapCameraListener implements KeyListener, MouseListener
 		if (config.cameraRotateRemap() && cameraRotateKeyPressed && config.cameraRotateKey().matches(e))
 		{
 			cameraRotateKeyPressed = false;
+			log.debug("rotation key {} released", KeyEvent.getKeyText(e.getKeyCode()));
 		}
 	}
 
 	@Override
 	public void focusLost()
 	{
+		log.debug("focus lost, forgetting every held key");
 		reset();
 	}
 
@@ -152,13 +175,19 @@ public class RemapCameraListener implements KeyListener, MouseListener
 			compassClicked();
 		}
 
-		if (config.cameraRotateMouseButton().matches(e.getButton())
-			&& (!config.respectDialogues() || !plugin.isDialogOpen()))
+		CameraRotateMouseButton configured = config.cameraRotateMouseButton();
+		boolean match = configured.matches(e.getButton());
+		boolean dialogueBlocks = config.respectDialogues() && plugin.isDialogOpen();
+
+		if (match && !dialogueBlocks)
 		{
 			// The event is left as it is: nothing is consumed and no button is rewritten, so the
 			// game sees exactly the click it would see without the plugin.
 			cameraRotateButtonPressed = true;
 		}
+
+		log.debug("mouse button {} pressed: option {}, match {}, dialogue blocks {}, consumed {}",
+			e.getButton(), configured, match, dialogueBlocks, e.isConsumed());
 
 		return e;
 	}
@@ -181,10 +210,14 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	@Override
 	public MouseEvent mouseReleased(MouseEvent e)
 	{
-		if (config.cameraRotateMouseButton().matches(e.getButton()))
+		boolean match = config.cameraRotateMouseButton().matches(e.getButton());
+
+		if (match)
 		{
 			cameraRotateButtonPressed = false;
 		}
+
+		log.debug("mouse button {} released: match {}, consumed {}", e.getButton(), match, e.isConsumed());
 
 		return e;
 	}
