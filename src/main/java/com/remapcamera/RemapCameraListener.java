@@ -34,6 +34,7 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	private RemapCameraPlugin plugin;
 
 	private volatile boolean cameraRotateKeyPressed = false;
+	private volatile boolean cameraRotateButtonPressed = false;
 
 	/**
 	 * The camera keys that are currently held. They are tracked here, on the listener the client
@@ -43,9 +44,10 @@ public class RemapCameraListener implements KeyListener, MouseListener
 
 	private volatile long compassClickUntil;
 
-	boolean isCameraRotateKeyPressed()
+	/** Whether the free look camera should rotate, by the configured key or by the mouse button. */
+	boolean isCameraRotateHeld()
 	{
-		return cameraRotateKeyPressed;
+		return cameraRotateKeyPressed || cameraRotateButtonPressed;
 	}
 
 	boolean isCameraKeyHeld()
@@ -73,8 +75,18 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	void reset()
 	{
 		heldKeys.clear();
-		cameraRotateKeyPressed = false;
+		resetRotation();
 		compassClickUntil = 0;
+	}
+
+	/**
+	 * Forgets the rotation only. The configured key or button can change while one of them is held,
+	 * and its release would then never be recognised.
+	 */
+	void resetRotation()
+	{
+		cameraRotateKeyPressed = false;
+		cameraRotateButtonPressed = false;
 	}
 
 	@Override
@@ -92,14 +104,14 @@ public class RemapCameraListener implements KeyListener, MouseListener
 
 		if (config.cameraRotateRemap() && config.cameraRotateKey().matches(e))
 		{
-
-			if (config.respectDialogues()){
-   				if (plugin.isDialogOpen()){
-					return;
-				}
+			if (config.respectDialogues() && plugin.isDialogOpen())
+			{
+				return;
 			}
+
+			// Observe only, so the event is not consumed: the client keeps its own key state either
+			// way, and consuming would only take the key's activity away from the game.
 			cameraRotateKeyPressed = true;
-			e.consume();
 		}
 	}
 
@@ -111,7 +123,6 @@ public class RemapCameraListener implements KeyListener, MouseListener
 		if (config.cameraRotateRemap() && cameraRotateKeyPressed && config.cameraRotateKey().matches(e))
 		{
 			cameraRotateKeyPressed = false;
-			e.consume();
 		}
 	}
 
@@ -141,6 +152,14 @@ public class RemapCameraListener implements KeyListener, MouseListener
 			compassClicked();
 		}
 
+		if (config.cameraRotateMouseButton().matches(e.getButton())
+			&& (!config.respectDialogues() || !plugin.isDialogOpen()))
+		{
+			// The event is left as it is: nothing is consumed and no button is rewritten, so the
+			// game sees exactly the click it would see without the plugin.
+			cameraRotateButtonPressed = true;
+		}
+
 		return e;
 	}
 
@@ -162,6 +181,11 @@ public class RemapCameraListener implements KeyListener, MouseListener
 	@Override
 	public MouseEvent mouseReleased(MouseEvent e)
 	{
+		if (config.cameraRotateMouseButton().matches(e.getButton()))
+		{
+			cameraRotateButtonPressed = false;
+		}
+
 		return e;
 	}
 

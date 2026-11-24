@@ -101,7 +101,7 @@ public class RemapCameraPlugin extends Plugin
 	@Subscribe
 	public void onBeforeRender(BeforeRender event)
 	{
-		boolean rotating = inputListener.isCameraRotateKeyPressed() && !isDialogOpen();
+		boolean rotating = inputListener.isCameraRotateHeld() && !isDialogOpen();
 		boolean scaleKeys = config.cameraKeysEnabled();
 
 		if (!scaleKeys)
@@ -202,8 +202,16 @@ public class RemapCameraPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (CONFIG_GROUP.equals(event.getGroup())
-			&& "respectDialogues".equals(event.getKey())
+		if (!CONFIG_GROUP.equals(event.getGroup()))
+		{
+			return;
+		}
+
+		// The key or button that is held can be reconfigured while it is down, and its release
+		// would then no longer match.
+		inputListener.resetRotation();
+
+		if ("respectDialogues".equals(event.getKey())
 			&& Boolean.parseBoolean(event.getNewValue())
 			&& !config.indicatorRespectChatbox())
 		{

@@ -81,6 +81,20 @@ public interface RemapCameraConfig extends Config
 		return 1440;
 	}
 
+	@ConfigItem(
+			position = 6,
+			keyName = "cameraRotateMouseButton",
+			name = "Camera rotating mouse button",
+			description = "Rotate the camera while this mouse button is held. Prefer this over the " +
+					"camera rotating key: pressing a second keyboard key stops other held keys, such " +
+					"as space, from repeating, while a mouse button does not. Right click is never used.",
+			section = cameraSection
+	)
+	default CameraRotateMouseButton cameraRotateMouseButton()
+	{
+		return CameraRotateMouseButton.OFF;
+	}
+
 	@ConfigSection(
 			name = "Camera keys",
 			description = "Settings for the arrow key camera. Nothing below does anything while it is off.",
