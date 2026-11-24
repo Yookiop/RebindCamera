@@ -85,9 +85,8 @@ public interface RemapCameraConfig extends Config
 			position = 6,
 			keyName = "cameraRotateMouseButton",
 			name = "Camera rotating mouse button",
-			description = "Rotate the camera while this mouse button is held. Prefer this over the " +
-					"camera rotating key: pressing a second keyboard key stops other held keys, such " +
-					"as space, from repeating, while a mouse button does not. Right click is never used.",
+			description = "Rotate the camera while this mouse button is held, as an alternative to the " +
+					"camera rotating key.",
 			section = cameraSection
 	)
 	default CameraRotateMouseButton cameraRotateMouseButton()

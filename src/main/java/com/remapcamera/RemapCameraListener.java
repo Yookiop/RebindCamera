@@ -123,16 +123,27 @@ public class RemapCameraListener implements KeyListener, MouseListener
 
 		if (config.cameraRotateRemap() && config.cameraRotateKey().matches(e))
 		{
+			// A held key repeats this event, so only the first press is worth a log line.
+			boolean firstPress = !cameraRotateKeyPressed;
+
 			if (config.respectDialogues() && plugin.isDialogOpen())
 			{
-				log.debug("rotation key {} pressed but a dialogue is open", KeyEvent.getKeyText(e.getKeyCode()));
+				if (firstPress)
+				{
+					log.debug("rotation key {} pressed but a dialogue is open", KeyEvent.getKeyText(e.getKeyCode()));
+				}
+
 				return;
 			}
 
 			// Observe only, so the event is not consumed: the client keeps its own key state either
 			// way, and consuming would only take the key's activity away from the game.
+			if (firstPress)
+			{
+				log.debug("rotation key {} held", KeyEvent.getKeyText(e.getKeyCode()));
+			}
+
 			cameraRotateKeyPressed = true;
-			log.debug("rotation key {} held", KeyEvent.getKeyText(e.getKeyCode()));
 		}
 	}
 
