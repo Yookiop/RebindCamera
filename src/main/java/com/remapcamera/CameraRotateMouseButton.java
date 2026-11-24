@@ -5,8 +5,11 @@ package com.remapcamera;
  *
  * <p>Only extra buttons are offered. The left and right button belong to the game, and the middle
  * button already rotates the camera itself, so using it here would rotate twice.
+ *
+ * <p>The enum is public because it is a config item type: the config RuneLite hands to the plugin is
+ * a dynamic proxy, and a proxy cannot return a type it cannot access.
  */
-enum CameraRotateMouseButton
+public enum CameraRotateMouseButton
 {
 	OFF("Off", 0),
 	BUTTON_4("Mouse button 4", 4),

@@ -1,7 +1,9 @@
 package com.remapcamera;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import java.lang.reflect.Proxy;
 import org.junit.Test;
 
 public class CameraRotateMouseButtonTest
@@ -33,5 +35,24 @@ public class CameraRotateMouseButtonTest
 	{
 		assertFalse(CameraRotateMouseButton.OFF.matches(4));
 		assertFalse(CameraRotateMouseButton.OFF.matches(5));
+	}
+
+	/**
+	 * RuneLite hands the plugin a dynamic proxy for the config interface, and that proxy class lives
+	 * in its own package. A config item type it cannot access throws an IllegalAccessError on every
+	 * call, which is why the enum has to be public.
+	 */
+	@Test
+	public void theConfigProxyReturnsTheOption()
+	{
+		RemapCameraConfig config = (RemapCameraConfig) Proxy.newProxyInstance(
+			RemapCameraConfig.class.getClassLoader(),
+			new Class<?>[]
+			{
+				RemapCameraConfig.class
+			},
+			(proxy, method, args) -> CameraRotateMouseButton.BUTTON_5);
+
+		assertSame(CameraRotateMouseButton.BUTTON_5, config.cameraRotateMouseButton());
 	}
 }
