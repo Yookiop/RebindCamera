@@ -41,16 +41,13 @@ public class RemapCameraPlugin extends Plugin
 	private static final int PITCH_MAX = 3064;
 	private static final double MAX_SPEED = 20;
 
-	/** The slowest camera speed the client accepts; anything lower is clamped to it. */
 	private static final float SLOWEST_CLIENT_CAMERA_SPEED = 0.2f;
 
-	/** The camera speed the client starts with, until the built-in Camera plugin says otherwise. */
 	private static final float DEFAULT_CLIENT_CAMERA_SPEED = 1f;
 
 	/** Used to mirror the camera mouse button mask of the built-in Camera plugin. */
 	private static final String CAMERA_CONFIG_GROUP = "camera";
 
-	/** The built-in Camera plugin stores its settings, including the camera speed, under this group. */
 	private static final String CAMERA_PLUGIN_CONFIG_GROUP = "zoom";
 
 	private static final String CAMERA_SPEED_KEY = "cameraSpeed";
@@ -102,13 +99,10 @@ public class RemapCameraPlugin extends Plugin
 
 	private long lastRotationLog;
 
-	/** Whether the client's own camera speed is currently held down by the plugin. */
 	private boolean clientCameraSlowed;
 
-	/** How often the movement the client makes on its own is written to the debug log. */
 	private static final long CAMERA_LOG_INTERVAL_MS = 1000;
 
-	/** The camera target of the previous frame, to measure what the client moves the camera itself. */
 	private int previousYawTarget = -1;
 	private int previousPitchTarget = -1;
 	private long lastCameraLog;
@@ -137,7 +131,6 @@ public class RemapCameraPlugin extends Plugin
 		overlayManager.remove(keyOverlay);
 		lastMousePosition = null;
 
-		// A key that is held while the plugin is turned off never gets its speed back otherwise.
 		slowClientCamera(false);
 
 		// The release of a key that is held while the plugin is turned off is never seen, so it
@@ -193,8 +186,6 @@ public class RemapCameraPlugin extends Plugin
 			boolean clientDrivesCamera = clientCameraDrag() && (mouseMoved || !cameraKeysHeld);
 			double keySpeed = cameraSpeed();
 
-			// Keep the client's own movement out of the picture: it is what shakes the view while the
-			// camera keys must not move the camera.
 			slowClientCamera(slowDownClientCamera(keySpeed, cameraKeysHeld));
 
 			logClientCameraMovement(yaw, pitch);
@@ -252,34 +243,15 @@ public class RemapCameraPlugin extends Plugin
 		}
 	}
 
-	/**
-	 * Whether the client's own camera has to be held still: an arrow key is held while the camera keys
-	 * are configured not to move the camera at all.
-	 *
-	 * <p>Deliberately nothing else. Every change of the client's camera speed while a key is held
-	 * changes the movement the client adds to the camera from one frame to the next, which shows as the
-	 * whole view jumping; a mouse click has to leave it alone, or every click would jump.
-	 */
 	static boolean slowDownClientCamera(double keySpeed, boolean cameraKeysHeld)
 	{
 		return keySpeed <= 0 && cameraKeysHeld;
 	}
 
-	/**
-	 * Holds the client's own camera still, or gives it back.
-	 *
-	 * <p>What makes the view shake is the movement the client makes itself: after the plugin has
-	 * written the target of a frame, the client adds its own movement to the camera, scaled with its
-	 * camera speed and with the frame time. With the camera speed at the client's minimum that movement
-	 * is a fraction of a degree instead of a couple of degrees, and the shiver that comes from the frame
-	 * time falls below a pixel. The keys themselves are left alone: they still reach the client, so the
-	 * game keeps seeing them as input.
-	 */
 	private void slowClientCamera(boolean slow)
 	{
 		if (slow)
 		{
-			// Written every frame, so a change of the built-in Camera plugin cannot undo it.
 			client.setCameraSpeed(SLOWEST_CLIENT_CAMERA_SPEED);
 			clientCameraSlowed = true;
 		}
@@ -290,7 +262,6 @@ public class RemapCameraPlugin extends Plugin
 		}
 	}
 
-	/** The camera speed the built-in Camera plugin gives the client, or the client's own default. */
 	private float configuredCameraSpeed()
 	{
 		Double speed = configManager.getConfiguration(CAMERA_PLUGIN_CONFIG_GROUP, CAMERA_SPEED_KEY, Double.class);
@@ -298,11 +269,6 @@ public class RemapCameraPlugin extends Plugin
 		return speed == null ? DEFAULT_CLIENT_CAMERA_SPEED : speed.floatValue();
 	}
 
-	/**
-	 * Writes at most one line per second about the movement the client makes on its own. That movement
-	 * is added to the camera after the target of a frame has been written, so it is what a shiver that
-	 * is left comes from.
-	 */
 	private void logClientCameraMovement(int yawTarget, int pitchTarget)
 	{
 		int yawMovement = previousYawTarget < 0 ? 0 : yawTarget - previousYawTarget;
