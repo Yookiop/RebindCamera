@@ -41,8 +41,19 @@ public class RemapCameraPlugin extends Plugin
 	private static final int PITCH_MAX = 3064;
 	private static final double MAX_SPEED = 20;
 
+	/** The slowest camera speed the client accepts; anything lower is clamped to it. */
+	private static final float SLOWEST_CLIENT_CAMERA_SPEED = 0.2f;
+
+	/** The camera speed the client starts with, until the built-in Camera plugin says otherwise. */
+	private static final float DEFAULT_CLIENT_CAMERA_SPEED = 1f;
+
 	/** Used to mirror the camera mouse button mask of the built-in Camera plugin. */
 	private static final String CAMERA_CONFIG_GROUP = "camera";
+
+	/** The built-in Camera plugin stores its settings, including the camera speed, under this group. */
+	private static final String CAMERA_PLUGIN_CONFIG_GROUP = "zoom";
+
+	private static final String CAMERA_SPEED_KEY = "cameraSpeed";
 
 	private static final int CAMERA_MOUSE_BUTTONS =
 		(1 << MouseEvent.BUTTON2) | (1 << 4 /* the middle mouse button of the client */);
@@ -91,6 +102,17 @@ public class RemapCameraPlugin extends Plugin
 
 	private long lastRotationLog;
 
+	/** Whether the client's own camera speed is currently held down by the plugin. */
+	private boolean clientCameraSlowed;
+
+	/** How often the movement the client makes on its own is written to the debug log. */
+	private static final long CAMERA_LOG_INTERVAL_MS = 1000;
+
+	/** The camera target of the previous frame, to measure what the client moves the camera itself. */
+	private int previousYawTarget = -1;
+	private int previousPitchTarget = -1;
+	private long lastCameraLog;
+
 	@Override
 	protected void startUp() throws Exception
 	{
@@ -101,6 +123,7 @@ public class RemapCameraPlugin extends Plugin
 		lastRotating = false;
 		inputListenerInFront = false;
 		lastRotationLog = 0;
+		clientCameraSlowed = false;
 
 		log.debug("started: rotate key {}, rotate button {}, camera keys {}",
 			config.cameraRotateKey(), config.cameraRotateMouseButton(), config.cameraKeysEnabled());
@@ -113,6 +136,9 @@ public class RemapCameraPlugin extends Plugin
 		mouseManager.unregisterMouseListener(inputListener);
 		overlayManager.remove(keyOverlay);
 		lastMousePosition = null;
+
+		// A key that is held while the plugin is turned off never gets its speed back otherwise.
+		slowClientCamera(false);
 
 		// The release of a key that is held while the plugin is turned off is never seen, so it
 		// would otherwise stay held for the indicator.
@@ -144,6 +170,7 @@ public class RemapCameraPlugin extends Plugin
 			// With the camera key configuration off the plugin behaves like it did before those
 			// options existed: the arrow keys are left to the client and only the rotation is written.
 			cameraSpeed.reset();
+			slowClientCamera(false);
 
 			if (!rotating)
 			{
@@ -162,10 +189,17 @@ public class RemapCameraPlugin extends Plugin
 			// the camera is rotated, and while the client is dragging its own camera with the mouse,
 			// only that rotation may move the camera.
 			boolean mouseMoved = mouseMoved();
-			boolean clientDrivesCamera = clientCameraDrag()
-				&& (mouseMoved || !inputListener.isCameraKeyHeld());
+			boolean cameraKeysHeld = inputListener.isCameraKeyHeld();
+			boolean clientDrivesCamera = clientCameraDrag() && (mouseMoved || !cameraKeysHeld);
+			double keySpeed = cameraSpeed();
 
-			cameraSpeed.update(yaw, pitch, cameraSpeed(), clientDrivesCamera,
+			// Keep the client's own movement out of the picture: it is what shakes the view while the
+			// camera keys must not move the camera.
+			slowClientCamera(slowDownClientCamera(keySpeed, cameraKeysHeld));
+
+			logClientCameraMovement(yaw, pitch);
+
+			cameraSpeed.update(yaw, pitch, keySpeed, clientDrivesCamera,
 				rotating && !clientDrivesCamera, inputListener.isCompassClickActive());
 			yaw = cameraSpeed.yaw();
 			pitch = cameraSpeed.pitch();
@@ -216,6 +250,77 @@ public class RemapCameraPlugin extends Plugin
 		{
 			cameraSpeed.written(yaw, pitch);
 		}
+	}
+
+	/**
+	 * Whether the client's own camera has to be held still: an arrow key is held while the camera keys
+	 * are configured not to move the camera at all.
+	 *
+	 * <p>Deliberately nothing else. Every change of the client's camera speed while a key is held
+	 * changes the movement the client adds to the camera from one frame to the next, which shows as the
+	 * whole view jumping; a mouse click has to leave it alone, or every click would jump.
+	 */
+	static boolean slowDownClientCamera(double keySpeed, boolean cameraKeysHeld)
+	{
+		return keySpeed <= 0 && cameraKeysHeld;
+	}
+
+	/**
+	 * Holds the client's own camera still, or gives it back.
+	 *
+	 * <p>What makes the view shake is the movement the client makes itself: after the plugin has
+	 * written the target of a frame, the client adds its own movement to the camera, scaled with its
+	 * camera speed and with the frame time. With the camera speed at the client's minimum that movement
+	 * is a fraction of a degree instead of a couple of degrees, and the shiver that comes from the frame
+	 * time falls below a pixel. The keys themselves are left alone: they still reach the client, so the
+	 * game keeps seeing them as input.
+	 */
+	private void slowClientCamera(boolean slow)
+	{
+		if (slow)
+		{
+			// Written every frame, so a change of the built-in Camera plugin cannot undo it.
+			client.setCameraSpeed(SLOWEST_CLIENT_CAMERA_SPEED);
+			clientCameraSlowed = true;
+		}
+		else if (clientCameraSlowed)
+		{
+			clientCameraSlowed = false;
+			client.setCameraSpeed(configuredCameraSpeed());
+		}
+	}
+
+	/** The camera speed the built-in Camera plugin gives the client, or the client's own default. */
+	private float configuredCameraSpeed()
+	{
+		Double speed = configManager.getConfiguration(CAMERA_PLUGIN_CONFIG_GROUP, CAMERA_SPEED_KEY, Double.class);
+
+		return speed == null ? DEFAULT_CLIENT_CAMERA_SPEED : speed.floatValue();
+	}
+
+	/**
+	 * Writes at most one line per second about the movement the client makes on its own. That movement
+	 * is added to the camera after the target of a frame has been written, so it is what a shiver that
+	 * is left comes from.
+	 */
+	private void logClientCameraMovement(int yawTarget, int pitchTarget)
+	{
+		int yawMovement = previousYawTarget < 0 ? 0 : yawTarget - previousYawTarget;
+		int pitchMovement = previousPitchTarget < 0 ? 0 : pitchTarget - previousPitchTarget;
+		previousYawTarget = yawTarget;
+		previousPitchTarget = pitchTarget;
+
+		long now = System.currentTimeMillis();
+
+		if (!log.isDebugEnabled() || now - lastCameraLog < CAMERA_LOG_INTERVAL_MS)
+		{
+			return;
+		}
+
+		lastCameraLog = now;
+		log.debug("camera keys: the client moved the camera {} yaw / {} pitch units itself, camera speed {}",
+			yawMovement, pitchMovement,
+			clientCameraSlowed ? SLOWEST_CLIENT_CAMERA_SPEED : configuredCameraSpeed());
 	}
 
 	/**
